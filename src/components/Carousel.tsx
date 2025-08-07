@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import './Carousel.scss';
 
 type Props = {
@@ -36,16 +36,39 @@ const Carousel: React.FC<Props> = ({
     setMoveIndex(prevIndex => {
       const nextIndex = prevIndex + steps;
 
-      if (prevIndex >= images.length - reminder) {
-        return prevIndex;
-      }
+      if (infiniteCarousel) {
+        setMoveAmount(pictureWidth * steps);
 
-      if (nextIndex === images.length - reminder) {
-        const lastShown =
-          Math.max(steps, sizeFrame) - Math.min(steps, sizeFrame);
-        setMoveAmount(pictureWidth * (reminder + lastShown) + moveAmount);
+        const lastPart = items.slice(0, steps);
+
+        setTimeout(() => {
+          setItems([
+            ...items.slice(steps, steps + steps),
+            ...items.slice(steps),
+          ]);
+        }, durationOfAnimation);
+
+        setTimeout(() => {
+          setTransitionAnimation(false);
+          setMoveAmount(0);
+        }, durationOfAnimation * 1.2);
+
+        setTimeout(() => {
+          setItems([...items.slice(steps), ...lastPart]);
+          setTransitionAnimation(true);
+        }, durationOfAnimation * 1.3);
       } else {
-        setMoveAmount(pictureWidth * nextIndex);
+        if (prevIndex >= images.length - reminder) {
+          return prevIndex;
+        }
+
+        if (nextIndex === images.length - reminder) {
+          const lastShown =
+            Math.max(steps, sizeFrame) - Math.min(steps, sizeFrame);
+          setMoveAmount(pictureWidth * (reminder + lastShown) + moveAmount);
+        } else {
+          setMoveAmount(pictureWidth * nextIndex);
+        }
       }
 
       return nextIndex;
@@ -58,16 +81,29 @@ const Carousel: React.FC<Props> = ({
     setMoveIndex(prevIndex => {
       const previousIndex = prevIndex - steps;
 
-      if (prevIndex === 0) {
-        return prevIndex;
-      }
-
-      if (previousIndex === 0) {
-        const lastShown =
-          Math.max(steps, sizeFrame) - Math.min(steps, sizeFrame);
-        setMoveAmount(pictureWidth * lastShown);
+      if (infiniteCarousel) {
+        setTransitionAnimation(false);
+        setMoveAmount(pictureWidth * steps);
+        setItems([
+          ...items.slice(items.length - steps),
+          ...items.slice(0, items.length - steps),
+        ]);
+        setTimeout(() => {
+          setTransitionAnimation(true);
+          setMoveAmount(0);
+        });
       } else {
-        setMoveAmount(pictureWidth * (previousIndex - steps + reminder));
+        if (prevIndex === 0) {
+          return prevIndex;
+        }
+
+        if (previousIndex === 0) {
+          const lastShown =
+            Math.max(steps, sizeFrame) - Math.min(steps, sizeFrame);
+          setMoveAmount(pictureWidth * lastShown);
+        } else {
+          setMoveAmount(pictureWidth * (previousIndex - steps + reminder));
+        }
       }
 
       return previousIndex;
@@ -113,7 +149,7 @@ const Carousel: React.FC<Props> = ({
         />
       </label>
       <label htmlFor="durationId">
-        Picture Width:
+        Animation Duration:
         <input
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
             setDurationOfAnimation(parseInt(e.target.value));
@@ -124,7 +160,29 @@ const Carousel: React.FC<Props> = ({
           value={durationOfAnimation}
         />
       </label>
-      ;
+      <label htmlFor="infinite">
+        Infinite carousel:
+        <select
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+            setInfiniteCarousel(e.target.value === 'true');
+          }}
+          name="infinite"
+          id="infinite"
+          value={infiniteCarousel ? 'true' : 'false'}
+        >
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+        {/* <input
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            setDurationOfAnimation(parseInt(e.target.value));
+          }}
+          id="infinite"
+          type="number"
+          name="animationDuration"
+          value={durationOfAnimation}
+        /> */}
+      </label>
       <div className="Carousel">
         <div className="Carousel__list">
           <button
@@ -141,9 +199,9 @@ const Carousel: React.FC<Props> = ({
               overflow: 'hidden',
             }}
           >
-            {items.map(img => {
+            {items.map((img, i) => {
               return (
-                <li key={`${items.indexOf(img)}`}>
+                <li key={i}>
                   <img
                     width={pictureWidth}
                     style={{
