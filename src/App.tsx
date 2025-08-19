@@ -29,7 +29,7 @@ class App extends React.Component<{}, State> {
     frameSize: 3,
     animationDuration: 1000,
     itemWidth: 130,
-    infinite: false,
+    infinite: true,
   };
 
   changeStep = (e: React.ChangeEvent<HTMLInputElement>) => {

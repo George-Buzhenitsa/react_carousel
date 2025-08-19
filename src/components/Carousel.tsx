@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './Carousel.scss';
 
 type Props = {
@@ -23,93 +23,80 @@ const Carousel: React.FC<Props> = ({
   const [prevDisable, setPrevDisable] = useState(false);
   const [transitionAnimation, setTransitionAnimation] = useState(true);
 
-  const [, setMoveIndex] = useState(0);
   const [moveAmount, setMoveAmount] = useState(0);
 
+  useEffect(() => {
+    setItems(images);
+    setMoveAmount(0);
+    setNextDisable(false);
+    setPrevDisable(!infinite);
+    setTransitionAnimation(true);
+  }, [images, infinite, step, frameSize]);
+
   const getNext = () => {
-    const reminder = images.length % step;
+    if (infinite) {
+      const newMoveAmount = itemWidth * step;
 
-    setPrevDisable(false);
+      setMoveAmount(newMoveAmount);
+      setTimeout(() => {
+        setItems([...items.slice(step), ...items.slice(0, step)]);
+        setTransitionAnimation(false);
+        setMoveAmount(0);
+      }, animationDuration);
 
-    setMoveIndex(prevIndex => {
-      const nextIndex = prevIndex + step;
+      setTransitionAnimation(true);
+    } else {
+      setPrevDisable(false);
 
-      if (infinite) {
-        setMoveAmount(itemWidth * step);
+      const fullMoveAmount = items.length * itemWidth;
+      const visibleMoveAmount = frameSize * itemWidth;
+      const stepMoveAmount = step * itemWidth;
 
-        const lastPart = items.slice(0, step);
+      const newMoveAmount = moveAmount + stepMoveAmount;
 
-        setTimeout(() => {
-          setItems([
-            ...items.slice(step, step + step),
-            ...items.slice(step),
-          ]);
-        }, animationDuration);
+      const overflowSteps = newMoveAmount + stepMoveAmount > fullMoveAmount;
+      const overflowVisible =
+        newMoveAmount + visibleMoveAmount > fullMoveAmount;
 
-        setTimeout(() => {
-          setTransitionAnimation(false);
-          setMoveAmount(0);
-        }, animationDuration * 1.2);
-
-        setTimeout(() => {
-          setItems([...items.slice(step), ...lastPart]);
-          setTransitionAnimation(true);
-        }, animationDuration * 1.3);
+      if (overflowVisible) {
+        setMoveAmount(
+          moveAmount - visibleMoveAmount + (fullMoveAmount - moveAmount),
+        );
+        setNextDisable(true);
+      } else if (overflowSteps) {
+        setMoveAmount(
+          moveAmount - stepMoveAmount + (fullMoveAmount - moveAmount),
+        );
+        setNextDisable(true);
       } else {
-        if (prevIndex >= images.length - reminder) {
-          return prevIndex;
-        }
-
-        if (nextIndex === images.length - reminder) {
-          const lastShown =
-            Math.max(step, frameSize) - Math.min(step, frameSize);
-          setMoveAmount(itemWidth * (reminder + lastShown) + moveAmount);
-          setNextDisable(true);
-        } else {
-          setMoveAmount(itemWidth * nextIndex);
-        }
+        setMoveAmount(newMoveAmount);
       }
-
-      return nextIndex;
-    });
+    }
   };
 
   const goPrev = () => {
-    const reminder = images.length % step;
+    if (infinite) {
+      setTransitionAnimation(false);
+      setMoveAmount(itemWidth * step);
+      setItems([...items.slice(-step), ...items.slice(0, -step)]);
 
-    setNextDisable(false);
+      setTimeout(() => {
+        setTransitionAnimation(true);
+        setMoveAmount(0);
+      })
+    } else {
+      setNextDisable(false);
 
-    setMoveIndex(prevIndex => {
-      const previousIndex = prevIndex - step;
+      const stepMoveAmount = itemWidth * step;
+      const newMoveAmount = moveAmount - stepMoveAmount;
 
-      if (infinite) {
-        setTransitionAnimation(false);
-        setMoveAmount(itemWidth * step);
-        setItems([
-          ...items.slice(items.length - step),
-          ...items.slice(0, items.length - step),
-        ]);
-        setTimeout(() => {
-          setTransitionAnimation(true);
-          setMoveAmount(0);
-        });
+      if (newMoveAmount + stepMoveAmount - stepMoveAmount < 0) {
+        setMoveAmount(0);
+        setPrevDisable(true);
       } else {
-        if (prevIndex === 0) {
-          return prevIndex;
-        }
-
-        if (previousIndex === 0) {
-          const lastShown =
-            Math.max(step, frameSize) - Math.min(step, frameSize);
-          setMoveAmount(itemWidth * lastShown);
-          setPrevDisable(true);
-        } else {
-          setMoveAmount(itemWidth * (previousIndex - step + reminder));
-        }
+        setMoveAmount(newMoveAmount);
       }
-
-      return previousIndex;
-    });
+    }
   };
 
   return (
@@ -131,7 +118,7 @@ const Carousel: React.FC<Props> = ({
         >
           {items.map((img, i) => {
             return (
-              <li key={i}>
+              <li key={img}>
                 <img
                   width={itemWidth}
                   style={{
@@ -141,7 +128,7 @@ const Carousel: React.FC<Props> = ({
                       : 'none',
                   }}
                   src={img}
-                  alt={`${items.indexOf(img) + 1}`}
+                  alt={'Image ' + (i + 1)}
                   className="Carousel__img"
                 />
               </li>
